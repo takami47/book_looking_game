@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>最後の本を探して</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Yu Gothic', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .screen {
+            display: none;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 700px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        .screen.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        h1 {
+            text-align: center;
+            color: #764ba2;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+        }
+
+        .intro-text {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            line-height: 1.8;
+            border-left: 4px solid #764ba2;
+        }
+
+        .memo {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            font-style: italic;
+            border: 2px dashed #ffc107;
+        }
+
+        .hint-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .hint-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: bold;
+        }
+
+        .hint-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .hint-btn.viewed {
+            background: linear-gradient(135deg, #48c6ef 0%, #6f86d6 100%);
+        }
+
+        .final-hint {
+            background: #e3f2fd;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #1976d2;
+            border: 2px solid #1976d2;
+        }
+
+        .answer-section {
+            background: #f5f5f5;
+            padding: 25px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .answer-input {
+            width: 100%;
+            max-width: 300px;
+            padding: 15px;
+            font-size: 1.3em;
+            border: 3px solid #764ba2;
+            border-radius: 10px;
+            margin: 15px auto;
+            display: block;
+            text-align: center;
+        }
+
+        .submit-btn {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.2em;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(245, 87, 108, 0.4);
+        }
+
+        .start-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 50px;
+            font-size: 1.3em;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: bold;
+            display: block;
+            margin: 30px auto;
+            transition: all 0.3s;
+        }
+
+        .start-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        /* モーダル */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .modal.active {
+            display: flex;
+            animation: fadeIn 0.3s;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            max-width: 600px;
+            width: 100%;
+            max-height: 80vh;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            font-size: 2em;
+            cursor: pointer;
+            color: #999;
+            transition: color 0.2s;
+        }
+
+        .close-modal:hover {
+            color: #333;
+        }
+
+        /* ヒント1: あるなしクイズ */
+        .quiz-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 1.2em;
+        }
+
+        .quiz-table th, .quiz-table td {
+            border: 2px solid #764ba2;
+            padding: 15px;
+            text-align: center;
+        }
+
+        .quiz-table th {
+            background: #764ba2;
+            color: white;
+            font-weight: bold;
+        }
+
+        .quiz-table td {
+            background: #f8f9fa;
+        }
+
+        /* ヒント2: 赤い手 */
+        .red-hand {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 40px;
+        }
+
+        .hand {
+            width: 150px;
+            height: 180px;
+            background: #dc3545;
+            border-radius: 30px 30px 60px 60px;
+            position: relative;
+            box-shadow: 0 10px 30px rgba(220, 53, 69, 0.4);
+        }
+
+        .hand::before {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100px;
+            height: 40px;
+            background: #dc3545;
+            border-radius: 0 0 50px 50px;
+        }
+
+        /* ヒント3: 数式 */
+        .formula-paper {
+            background: #f8f9fa;
+            border: 3px solid #333;
+            padding: 40px;
+            margin: 20px 0;
+            text-align: center;
+            font-family: 'Courier New', monospace;
+            font-size: 2em;
+            font-weight: bold;
+            box-shadow: 5px 5px 0 rgba(0, 0, 0, 0.1);
+            transform: rotate(-2deg);
+        }
+
+        /* 結果画面 */
+        .result-text {
+            line-height: 2;
+            margin: 20px 0;
+            font-size: 1.1em;
+        }
+
+        .announcement {
+            background: #fff3cd;
+            border: 3px solid #ffc107;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            font-weight: bold;
+        }
+
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+            display: none;
+        }
+
+        .error-message.show {
+            display: block;
+            animation: shake 0.5s;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+
+        @media (max-width: 600px) {
+            h1 { font-size: 1.8em; }
+            .screen { padding: 20px; }
+            .quiz-table { font-size: 1em; }
+            .formula-paper { font-size: 1.5em; }
+        }
+    </style>
+</head>
+<body>
+    <!-- タイトル画面 -->
+    <div id="title-screen" class="screen active">
+        <h1>📚 最後の本を探して</h1>
+        <div class="intro-text">
+            図書館に足を踏み入れると、静寂が広がっていた。<br>
+            机の上には、古びたメモが置かれている...<br><br>
+            <div class="memo">
+                「最後のほんだ」
+            </div>
+            <br>
+            一体何を意味しているのだろうか?<br>
+            3つのヒントを手がかりに、謎を解き明かせ!
+        </div>
+        <button class="start-btn" onclick="startGame()">謎解きを始める</button>
+    </div>
+
+    <!-- メインゲーム画面 -->
+    <div id="game-screen" class="screen">
+        <h1>📚 最後の本を探して</h1>
+        
+        <div class="hint-buttons">
+            <button class="hint-btn" id="hint1-btn" onclick="showHint(1)">
+                ヒント1を見る
+            </button>
+            <button class="hint-btn" id="hint2-btn" onclick="showHint(2)">
+                ヒント2を見る
+            </button>
+            <button class="hint-btn" id="hint3-btn" onclick="showHint(3)">
+                ヒント3を見る
+            </button>
+        </div>
+
+        <div class="final-hint">
+            📝 最終問題のヒント<br>
+            ヒント1 - ヒント2 × ヒント3
+        </div>
+
+        <div class="answer-section">
+            <p style="margin-bottom: 15px; font-weight: bold; color: #764ba2;">
+                📖 探している本の番号を入力してください
+            </p>
+            <input type="text" id="answer-input" class="answer-input" placeholder="">
+            <button class="submit-btn" onclick="checkAnswer()">回答する</button>
+            <div id="error-message" class="error-message"></div>
+        </div>
+    </div>
+
+    <!-- 正解画面 -->
+    <div id="success-screen" class="screen">
+        <h1>🎉 謎が解けた!</h1>
+        <div class="result-text">
+            「わ-2900...これが答えか!」<br><br>
+            
+            あなたは図書館の本棚を探し、<br>
+            ついに「最後のほんだ」を見つけた。<br><br>
+            
+            手に取ったその本は...<br>
+            <strong>『家庭料理入門』</strong><br>
+            著者: 本田○○<br><br>
+            
+            「...ただの料理本!?」<br><br>
+            
+            その時、館内アナウンスが流れた―<br><br>
+            
+            <div class="announcement">
+                📢「駐車場のお客様にお知らせします。<br>
+                ナンバー『わ-2900』のお車、<br>
+                ライトが点いたままです」
+            </div>
+            <br>
+            
+            「あっ!『最後のほんだ』って...<br>
+            本田さんの車のことか!!」<br><br>
+            
+            「...って、わナンバー!?<br>
+            レンタカーじゃん!恥ずかしい...」<br><br>
+            
+            <strong style="color: #764ba2;">GAME CLEAR</strong>
+        </div>
+        <button class="start-btn" onclick="location.reload()">もう一度プレイ</button>
+    </div>
+
+    <!-- ヒント1モーダル -->
+    <div id="modal1" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeModal(1)">×</span>
+            <h2 style="text-align: center; color: #764ba2; margin-bottom: 30px;">ヒント1</h2>
+            <table class="quiz-table">
+                <tr>
+                    <th>ある</th>
+                    <th>なし</th>
+                </tr>
+                <tr>
+                    <td>太鼓</td>
+                    <td>ピアノ</td>
+                </tr>
+                <tr>
+                    <td>ゴム</td>
+                    <td>プラスチック</td>
+                </tr>
+                <tr>
+                    <td>服</td>
+                    <td>ズボン</td>
+                </tr>
+                <tr>
+                    <td>紙</td>
+                    <td>ビニール</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <!-- ヒント2モーダル -->
+    <div id="modal2" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeModal(2)">×</span>
+            <h2 style="text-align: center; color: #764ba2; margin-bottom: 30px;">ヒント2</h2>
+            <div class="red-hand">
+                <div class="hand"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ヒント3モーダル -->
+    <div id="modal3" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeModal(3)">×</span>
+            <h2 style="text-align: center; color: #764ba2; margin-bottom: 30px;">ヒント3</h2>
+            <div class="formula-paper">
+                (366-365)D
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let viewedHints = {
+            1: false,
+            2: false,
+            3: false
+        };
+
+        function startGame() {
+            document.getElementById('title-screen').classList.remove('active');
+            document.getElementById('game-screen').classList.add('active');
+        }
+
+        function showHint(number) {
+            document.getElementById('modal' + number).classList.add('active');
+            if (!viewedHints[number]) {
+                viewedHints[number] = true;
+                document.getElementById('hint' + number + '-btn').classList.add('viewed');
+            }
+        }
+
+        function closeModal(number) {
+            document.getElementById('modal' + number).classList.remove('active');
+        }
+
+        // モーダル外クリックで閉じる
+        window.onclick = function(event) {
+            if (event.target.classList.contains('modal')) {
+                event.target.classList.remove('active');
+            }
+        }
+
+        function checkAnswer() {
+            const input = document.getElementById('answer-input').value.trim();
+            const errorMsg = document.getElementById('error-message');
+            
+            // 全角・半角両対応
+            const correctAnswers = ['わ-2900', 'わ-2900', 'わー2900'];
+            
+            // 正規化して比較
+            const normalized = input.replace(/ー/g, '-').replace(/−/g, '-');
+            
+            if (correctAnswers.includes(normalized)) {
+                document.getElementById('game-screen').classList.remove('active');
+                document.getElementById('success-screen').classList.add('active');
+            } else {
+                errorMsg.textContent = '❌ 違います。もう一度考えてみましょう。';
+                errorMsg.classList.add('show');
+                
+                setTimeout(() => {
+                    errorMsg.classList.remove('show');
+                }, 3000);
+            }
+        }
+
+        // Enterキーでも回答できるように
+        document.addEventListener('DOMContentLoaded', function() {
+            const input = document.getElementById('answer-input');
+            if (input) {
+                input.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        checkAnswer();
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>
